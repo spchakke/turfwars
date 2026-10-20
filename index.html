@@ -202,74 +202,91 @@ canvas.confetti{position:fixed;inset:0;width:100%;height:100%;z-index:75;pointer
 </style>
 
 <div id="app"></div>
-<!-- Firebase SDK: fill in the configuration below before enabling cloud sync -->
+<!-- Firebase compatibility SDK, matching this single-file application's classic scripts -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
 const FIREBASE_CONFIG = {
-  apiKey: "REPLACE_WITH_API_KEY",
+  apiKey: "AIzaSyC000ztA_x_KxGnKva4zqBZ7DCwOhQxZQA",
   authDomain: "turf-wars-b6ea0.firebaseapp.com",
   databaseURL: "https://turf-wars-b6ea0-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "turf-wars-b6ea0",
-  appId: "REPLACE_WITH_APP_ID"
+  appId: "1:231555430819:web:37ebd9c95b879d611a8216"
 };
-let cloudDb = null, cloudReady = false, cloudUser = null;
-const cloudPending = new Set();
-function queueCloudMatch(m) {
-  if (!m || !m.id) return;
+const CLOUD_PATH = "turfwars_v2/matches";
+let cloudDb = null, cloudUid = null;
+let cloudPending = new Set(), cloudTimers = new Map(), cloudBusy = new Set();
+let cloudLoaded = false;
+function cloudSave(m) {
+  if (!m || !m.id || !m.ownerUid || m.ownerUid !== cloudUid) return;
   cloudPending.add(m.id);
-  flushCloud();
+  clearTimeout(cloudTimers.get(m.id));
+  cloudTimers.set(m.id, setTimeout(() => cloudFlush(m.id), 350));
 }
-async function flushCloud() {
-  if (!cloudReady || !cloudDb) return;
-  for (const id of [...cloudPending]) {
-    const m = DB.matches.find(x => x.id === id);
-    if (!m) { cloudPending.delete(id); continue; }
-    try {
-      await cloudDb.ref('matches/' + id).set(JSON.parse(JSON.stringify({...m, undo: []})));
-      cloudPending.delete(id);
-    } catch (err) { console.error('Firebase match save failed:', err); }
+async function cloudFlush(id) {
+  if (!cloudDb || !cloudUid || cloudBusy.has(id)) return;
+  const m = DB.matches.find(x => x.id === id);
+  if (!m || m.ownerUid !== cloudUid) return;
+  cloudBusy.add(id);
+  const stamp = m.updatedAt;
+  try {
+    // Undo snapshots are local-only; Firebase persists the current scorecard.
+    const data = JSON.parse(JSON.stringify({...m, undo: [], public: true}));
+    await cloudDb.ref(CLOUD_PATH + '/' + id).set(data);
+    if (m.updatedAt === stamp) cloudPending.delete(id);
+  } catch (e) { console.error('Firebase save failed', e); toast('Cloud save failed — score kept locally'); }
+  finally {
+    cloudBusy.delete(id);
+    if (cloudPending.has(id) && m.updatedAt !== stamp) cloudSave(m);
   }
 }
-async function deleteCloudMatch(id) {
-  if (!cloudReady || !cloudDb) return;
-  try { await cloudDb.ref('matches/' + id).remove(); }
-  catch (err) { console.error('Firebase deletion failed:', err); alert('Cloud deletion failed. Match may reappear on refresh.'); }
+async function cloudDelete(id) {
+  if (!cloudDb || !cloudUid) return;
+  clearTimeout(cloudTimers.get(id));
+  cloudPending.delete(id);
+  try { await cloudDb.ref(CLOUD_PATH + '/' + id).remove(); }
+  catch(e) { console.error('Firebase delete failed', e); toast('Cloud deletion failed'); }
+}
+function mergeCloudMatch(data) {
+  if (!data || !data.id || !Array.isArray(data.innings) || data.innings.length !== 2) return;
+  const i = DB.matches.findIndex(m => m.id === data.id);
+  if (cloudPending.has(data.id)) return;
+  if (i < 0) DB.matches.push({...data, undo: []});
+  else if ((data.updatedAt || 0) > (DB.matches[i].updatedAt || 0))
+    DB.matches[i] = {...data, undo: DB.matches[i].undo || []};
+  else return;
+  DB.matches.sort((a,b) => (b.updatedAt||0)-(a.updatedAt||0));
+  saveDB();
+  if (!(document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName))) render();
 }
 async function initFirebase() {
-  if (FIREBASE_CONFIG.apiKey.startsWith('REPLACE_') || FIREBASE_CONFIG.appId.startsWith('REPLACE_')) {
-    console.info('Firebase not configured; Turf Wars is running with local storage.');
-    return;
-  }
   try {
     firebase.initializeApp(FIREBASE_CONFIG);
-    const credential = await firebase.auth().signInAnonymously();
-    cloudUser = credential.user.uid;
     cloudDb = firebase.database();
-    cloudReady = true;
-    cloudDb.ref('matches').on('value', snapshot => {
-      const remote = snapshot.val() || {};
-      let changed = false;
-      Object.entries(remote).forEach(([id, data]) => {
-        if (!data || typeof data !== 'object' || !Array.isArray(data.innings)) return;
-        if (cloudPending.has(id)) return;
-        const local = DB.matches.find(m => m.id === id);
-        if (!local) { DB.matches.push(data); changed = true; }
-        else if ((data.updatedAt || 0) > (local.updatedAt || 0)) {
-          Object.assign(local, data);
-          changed = true;
-        }
-      });
-      if (changed) {
-        DB.matches.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-        saveDB();
-        const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
-        if (!typing && !(ui.modal && ui.modal.type === 'wicket')) render();
+    // Public spectators do not need authentication to read published matches.
+    const publicQuery = cloudDb.ref(CLOUD_PATH).orderByChild('public').equalTo(true);
+    publicQuery.on('child_added', snap => mergeCloudMatch(snap.val()),
+      err => console.error('Public match read failed', err));
+    publicQuery.on('child_changed', snap => mergeCloudMatch(snap.val()),
+      err => console.error('Public match updates failed', err));
+    publicQuery.on('child_removed', snap => {
+      const id = snap.key;
+      if (cloudPending.has(id)) return;
+      const i = DB.matches.findIndex(m => m.id === id);
+      if (i >= 0) {
+        DB.matches.splice(i, 1);
+        if (DB.activeId === id) DB.activeId = null;
+        saveDB(); render();
       }
-    }, err => console.error('Firebase read failed:', err));
-    flushCloud();
-  } catch (err) { console.error('Firebase initialization failed:', err); }
+    });
+    // Anonymous sign-in is used for creating/updating matches only.
+    const result = await firebase.auth().signInAnonymously();
+    cloudUid = result.user.uid;
+    for (const m of DB.matches) {
+      if (m.ownerUid === cloudUid && cloudPending.has(m.id)) cloudSave(m);
+    }
+  } catch (e) { console.error('Firebase startup failed', e); toast('Offline mode — scores saved locally'); }
 }
 </script>
 <script>
@@ -332,7 +349,7 @@ function createMatch(o) {
   const winner = o.tossWinner === 1 ? 1 : 0;
   const first = o.tossChoice === 'bowl' ? 1 - winner : winner;
   const m = {
-    id: uid(), createdAt: Date.now(), updatedAt: Date.now(), names, rosters, ppt,
+    id: uid(), createdAt: Date.now(), updatedAt: Date.now(), ownerUid: cloudUid, public: true, names, rosters, ppt,
     maxOvers: Math.min(50, Math.max(1, o.overs || 6)), venue: (o.venue || '').trim().slice(0, 40),
     rules: { wide: o.wide, noball: o.noball, freeHit: !!o.freeHit },
     toss: { winner, choice: o.tossChoice === 'bowl' ? 'bowl' : 'bat' },
@@ -340,7 +357,7 @@ function createMatch(o) {
     innings: [newInnings(first, 1 - first), newInnings(1 - first, first)],
     queue: [{ type: 'openers' }], undo: []
   };
-  DB.matches.unshift(m); DB.activeId = m.id; saveDB(); queueCloudMatch(m);
+  DB.matches.unshift(m); DB.activeId = m.id; saveDB(); cloudSave(m);
   return m;
 }
 
@@ -354,7 +371,7 @@ function undoLast(m) {
   Object.assign(m, prev); m.undo = keep; m.updatedAt = Date.now();
   saveDB(); return true;
 }
-function touch(m) { m.updatedAt = Date.now(); saveDB(); queueCloudMatch(m); }
+function touch(m) { m.updatedAt = Date.now(); saveDB(); cloudSave(m); }
 
 function bat(inn, name) {
   let b = inn.batters.find(x => x.name === name);
@@ -1120,7 +1137,7 @@ function handleAct(act, el, ev) {
         DB.matches = DB.matches.filter(x => x.id !== tid);
         if (DB.activeId === tid) DB.activeId = DB.matches[0] ? DB.matches[0].id : null;
         if (ui.liveId === tid) ui.liveId = null;
-        saveDB(); deleteCloudMatch(tid); toast('Match deleted');
+        saveDB(); cloudDelete(tid); toast('Match deleted');
       }
       render(); break;
     }
