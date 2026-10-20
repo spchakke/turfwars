@@ -202,6 +202,76 @@ canvas.confetti{position:fixed;inset:0;width:100%;height:100%;z-index:75;pointer
 </style>
 
 <div id="app"></div>
+<!-- Firebase SDK: fill in the configuration below before enabling cloud sync -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey: "REPLACE_WITH_API_KEY",
+  authDomain: "turf-wars-b6ea0.firebaseapp.com",
+  databaseURL: "https://turf-wars-b6ea0-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "turf-wars-b6ea0",
+  appId: "REPLACE_WITH_APP_ID"
+};
+let cloudDb = null, cloudReady = false, cloudUser = null;
+const cloudPending = new Set();
+function queueCloudMatch(m) {
+  if (!m || !m.id) return;
+  cloudPending.add(m.id);
+  flushCloud();
+}
+async function flushCloud() {
+  if (!cloudReady || !cloudDb) return;
+  for (const id of [...cloudPending]) {
+    const m = DB.matches.find(x => x.id === id);
+    if (!m) { cloudPending.delete(id); continue; }
+    try {
+      await cloudDb.ref('matches/' + id).set(JSON.parse(JSON.stringify({...m, undo: []})));
+      cloudPending.delete(id);
+    } catch (err) { console.error('Firebase match save failed:', err); }
+  }
+}
+async function deleteCloudMatch(id) {
+  if (!cloudReady || !cloudDb) return;
+  try { await cloudDb.ref('matches/' + id).remove(); }
+  catch (err) { console.error('Firebase deletion failed:', err); alert('Cloud deletion failed. Match may reappear on refresh.'); }
+}
+async function initFirebase() {
+  if (FIREBASE_CONFIG.apiKey.startsWith('REPLACE_') || FIREBASE_CONFIG.appId.startsWith('REPLACE_')) {
+    console.info('Firebase not configured; Turf Wars is running with local storage.');
+    return;
+  }
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const credential = await firebase.auth().signInAnonymously();
+    cloudUser = credential.user.uid;
+    cloudDb = firebase.database();
+    cloudReady = true;
+    cloudDb.ref('matches').on('value', snapshot => {
+      const remote = snapshot.val() || {};
+      let changed = false;
+      Object.entries(remote).forEach(([id, data]) => {
+        if (!data || typeof data !== 'object' || !Array.isArray(data.innings)) return;
+        if (cloudPending.has(id)) return;
+        const local = DB.matches.find(m => m.id === id);
+        if (!local) { DB.matches.push(data); changed = true; }
+        else if ((data.updatedAt || 0) > (local.updatedAt || 0)) {
+          Object.assign(local, data);
+          changed = true;
+        }
+      });
+      if (changed) {
+        DB.matches.sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        saveDB();
+        const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+        if (!typing && !(ui.modal && ui.modal.type === 'wicket')) render();
+      }
+    }, err => console.error('Firebase read failed:', err));
+    flushCloud();
+  } catch (err) { console.error('Firebase initialization failed:', err); }
+}
+</script>
 <script>
 /* ===== Turf Wars: storage + scoring engine ===== */
 const LS_KEY = 'turfwars.v2';
@@ -270,7 +340,7 @@ function createMatch(o) {
     innings: [newInnings(first, 1 - first), newInnings(1 - first, first)],
     queue: [{ type: 'openers' }], undo: []
   };
-  DB.matches.unshift(m); DB.activeId = m.id; saveDB();
+  DB.matches.unshift(m); DB.activeId = m.id; saveDB(); queueCloudMatch(m);
   return m;
 }
 
@@ -284,7 +354,7 @@ function undoLast(m) {
   Object.assign(m, prev); m.undo = keep; m.updatedAt = Date.now();
   saveDB(); return true;
 }
-function touch(m) { m.updatedAt = Date.now(); saveDB(); }
+function touch(m) { m.updatedAt = Date.now(); saveDB(); queueCloudMatch(m); }
 
 function bat(inn, name) {
   let b = inn.batters.find(x => x.name === name);
@@ -1050,7 +1120,7 @@ function handleAct(act, el, ev) {
         DB.matches = DB.matches.filter(x => x.id !== tid);
         if (DB.activeId === tid) DB.activeId = DB.matches[0] ? DB.matches[0].id : null;
         if (ui.liveId === tid) ui.liveId = null;
-        saveDB(); toast('Match deleted');
+        saveDB(); deleteCloudMatch(tid); toast('Match deleted');
       }
       render(); break;
     }
@@ -1139,6 +1209,7 @@ loadDB();
   if (['home', 'score', 'live', 'history', 'stats'].includes(h)) ui.route = h;
 })();
 render();
+initFirebase();
 
 </script>
 
