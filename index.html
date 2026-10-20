@@ -218,14 +218,25 @@ const CLOUD_PATH = "turfwars_v2/matches";
 let cloudDb = null, cloudUid = null;
 let cloudPending = new Set(), cloudTimers = new Map(), cloudBusy = new Set();
 let cloudLoaded = false;
+const cloudDeleted = new Set();
+function cloudQueueOwnedMatches() {
+  if (!cloudUid) return;
+  let changed = false;
+  for (const m of DB.matches) {
+    // Only claim locally-created matches that have never been assigned an owner.
+    if (!m.ownerUid) { m.ownerUid = cloudUid; changed = true; }
+    if (m.ownerUid === cloudUid) cloudSave(m);
+  }
+  if (changed) saveDB();
+}
 function cloudSave(m) {
-  if (!m || !m.id || !m.ownerUid || m.ownerUid !== cloudUid) return;
+  if (!m || !m.id || !m.ownerUid || m.ownerUid !== cloudUid || cloudDeleted.has(m.id)) return;
   cloudPending.add(m.id);
   clearTimeout(cloudTimers.get(m.id));
   cloudTimers.set(m.id, setTimeout(() => cloudFlush(m.id), 350));
 }
 async function cloudFlush(id) {
-  if (!cloudDb || !cloudUid || cloudBusy.has(id)) return;
+  if (!cloudDb || !cloudUid || cloudBusy.has(id) || cloudDeleted.has(id)) return;
   const m = DB.matches.find(x => x.id === id);
   if (!m || m.ownerUid !== cloudUid) return;
   cloudBusy.add(id);
@@ -238,18 +249,19 @@ async function cloudFlush(id) {
   } catch (e) { console.error('Firebase save failed', e); toast('Cloud save failed — score kept locally'); }
   finally {
     cloudBusy.delete(id);
-    if (cloudPending.has(id) && m.updatedAt !== stamp) cloudSave(m);
+    if (cloudPending.has(id) && m.updatedAt !== stamp && !cloudDeleted.has(id)) cloudSave(m);
   }
 }
 async function cloudDelete(id) {
-  if (!cloudDb || !cloudUid) return;
+  cloudDeleted.add(id);
+  if (!cloudDb || !cloudUid) { toast('Deleted locally; cloud deletion requires connection'); return; }
   clearTimeout(cloudTimers.get(id));
   cloudPending.delete(id);
   try { await cloudDb.ref(CLOUD_PATH + '/' + id).remove(); }
   catch(e) { console.error('Firebase delete failed', e); toast('Cloud deletion failed'); }
 }
 function mergeCloudMatch(data) {
-  if (!data || !data.id || !Array.isArray(data.innings) || data.innings.length !== 2) return;
+  if (!data || !data.id || cloudDeleted.has(data.id) || !Array.isArray(data.innings) || data.innings.length !== 2) return;
   const i = DB.matches.findIndex(m => m.id === data.id);
   if (cloudPending.has(data.id)) return;
   if (i < 0) DB.matches.push({...data, undo: []});
@@ -283,9 +295,7 @@ async function initFirebase() {
     // Anonymous sign-in is used for creating/updating matches only.
     const result = await firebase.auth().signInAnonymously();
     cloudUid = result.user.uid;
-    for (const m of DB.matches) {
-      if (m.ownerUid === cloudUid && cloudPending.has(m.id)) cloudSave(m);
-    }
+    cloudQueueOwnedMatches();
   } catch (e) { console.error('Firebase startup failed', e); toast('Offline mode — scores saved locally'); }
 }
 </script>
@@ -1134,6 +1144,7 @@ function handleAct(act, el, ev) {
       else if (fn === 'finish' && m) { pushUndo(m); finishMatch(m, false); touch(m); maybeCelebrateEnd(m); }
       else if (fn === 'newmatch') { ui.showSetup = true; }
       else if (fn === 'delete' && tid) {
+        cloudDeleted.add(tid);
         DB.matches = DB.matches.filter(x => x.id !== tid);
         if (DB.activeId === tid) DB.activeId = DB.matches[0] ? DB.matches[0].id : null;
         if (ui.liveId === tid) ui.liveId = null;
