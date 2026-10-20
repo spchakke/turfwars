@@ -1,0 +1,1145 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Turf Wars</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: sticky glass top bar, five views in one column (two columns on desktop scorer), bottom tab bar on phones. Dark turf-night look, lime accent, glossy glass surfaces. */
+:root{
+  --ink:#05120d; --pitch:#0b2a1d; --pitch2:#0f3a28;
+  --glass:rgba(255,255,255,.055); --glass2:rgba(255,255,255,.09); --line:rgba(255,255,255,.13);
+  --lime:#c8f43a; --lime2:#8ec31c; --amber:#ffb224; --red:#ff4d5f; --blue:#59c6ff;
+  --text:#eef8f1; --muted:#90ab9d; --dim:#5f7b6c;
+  --display:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  --body:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  background:var(--ink); color:var(--text); font-family:var(--body); font-size:15px; line-height:1.5;
+  padding-block:0; padding-left:max(16px,env(safe-area-inset-left,0px)); padding-right:max(16px,env(safe-area-inset-right,0px));
+  background-image:
+    radial-gradient(900px 500px at 85% -10%,rgba(200,244,58,.13),transparent 60%),
+    radial-gradient(700px 500px at -10% 30%,rgba(89,198,255,.08),transparent 60%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 64px,transparent 64px 128px);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--ink);z-index:60}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--lime)}
+.wrap{max-width:1080px;margin:0 auto;padding-bottom:104px}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.muted{color:var(--muted)} .dim{color:var(--dim)}
+.eyebrow{font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--lime)}
+h1,h2,h3{font-family:var(--display);margin:0;line-height:1;text-wrap:balance;text-transform:uppercase;letter-spacing:.5px}
+h2{font-size:30px;font-weight:800} h3{font-size:20px;font-weight:700}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;margin:0 -16px;padding:10px 16px;
+  background:linear-gradient(180deg,rgba(5,18,13,.92),rgba(5,18,13,.72));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:14px;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:25px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;background:none;border:0;padding:0}
+.logo b{color:var(--lime)}
+.logo i{width:26px;height:26px;border-radius:50%;display:inline-block;background:radial-gradient(circle at 32% 28%,#ff8a8a,#d1283a 45%,#6b0c1a 100%);box-shadow:0 0 14px rgba(255,77,95,.5),inset -2px -3px 5px rgba(0,0,0,.35)}
+.tabs{display:flex;gap:4px}
+.tab{background:none;border:1px solid transparent;color:var(--muted);padding:8px 14px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;transition:.18s}
+.tab:hover{color:var(--text)}
+.tab[aria-current=page]{color:#10200a;background:linear-gradient(180deg,#dcff6b,var(--lime) 55%,var(--lime2));box-shadow:0 6px 18px rgba(200,244,58,.25),inset 0 1px 0 rgba(255,255,255,.6)}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,77,95,.7);animation:pulse 1.6s infinite;margin-right:6px;vertical-align:middle}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(255,77,95,0)}100%{box-shadow:0 0 0 0 rgba(255,77,95,0)}}
+.bottom{display:none;position:fixed;left:0;right:0;bottom:0;z-index:55;padding:8px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));
+  background:rgba(5,18,13,.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.bottom .tabs{justify-content:space-between}
+.bottom .tab{flex:1;padding:9px 2px;font-size:12px;border-radius:12px}
+@media(max-width:760px){.top .tabs{display:none}.bottom{display:block}}
+
+/* glass surfaces */
+.glass{position:relative;background:linear-gradient(160deg,var(--glass2),var(--glass));border:1px solid var(--line);border-radius:20px;padding:18px;
+  box-shadow:0 14px 40px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:hidden}
+.glass::after{content:"";position:absolute;inset:0 0 auto;height:46%;background:linear-gradient(180deg,rgba(255,255,255,.07),transparent);pointer-events:none;border-radius:20px 20px 0 0}
+.glass>*{position:relative;z-index:1}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.between{justify-content:space-between}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:760px){.g3.collapse,.g2.collapse{grid-template-columns:1fr}}
+.cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:minmax(0,1fr)}}
+.sec{padding-top:26px}
+.sec-h{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+
+/* buttons, inputs */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:14px;border:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));color:var(--text);font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s,filter .15s;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);text-decoration:none}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.12)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:none}
+.btn-p{color:#10200a;border-color:transparent;background:linear-gradient(180deg,#e2ff7a,var(--lime) 55%,var(--lime2));box-shadow:0 10px 26px rgba(200,244,58,.28),inset 0 1px 0 rgba(255,255,255,.7)}
+.btn-d{color:#ffd9dd;border-color:rgba(255,77,95,.5);background:linear-gradient(180deg,rgba(255,77,95,.3),rgba(255,77,95,.1))}
+.btn-w{color:#fff;border-color:transparent;background:linear-gradient(180deg,#ff7482,var(--red) 55%,#c82a3c);box-shadow:0 10px 24px rgba(255,77,95,.3),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn-sm{min-height:34px;padding:6px 12px;border-radius:10px;font-size:13px}
+.btn-block{width:100%}
+label.f{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input[type=text],input[type=number],select,textarea{width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:12px;padding:11px 13px;color:var(--text);transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--lime);box-shadow:0 0 0 3px rgba(200,244,58,.16)}
+select option{background:#0b2a1d;color:var(--text)}
+textarea{min-height:110px;resize:vertical}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--muted);font-weight:700;font-size:13px;cursor:pointer}
+.chip[aria-pressed=true]{color:#10200a;background:linear-gradient(180deg,#dcff6b,var(--lime));border-color:transparent}
+.pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line)}
+.pill.live{color:#ffd9dd;border-color:rgba(255,77,95,.5);background:rgba(255,77,95,.15)}
+.pill.done{color:var(--lime);border-color:rgba(200,244,58,.4);background:rgba(200,244,58,.1)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:24px;align-items:center;padding:44px 0 10px}
+@media(max-width:860px){.hero{grid-template-columns:1fr;padding-top:28px}.hero-art{order:-1;min-height:200px}}
+.hero h1{font-size:clamp(54px,10vw,112px);font-weight:800;font-style:italic;line-height:.9;margin:14px 0 16px;letter-spacing:-1px}
+.hero h1 span{background:linear-gradient(180deg,#f0ffa8,var(--lime) 50%,var(--lime2));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 22px rgba(200,244,58,.35))}
+.hero p{max-width:520px;color:var(--muted);font-size:17px;margin:0 0 24px}
+.hero-art{position:relative;min-height:300px;display:flex;align-items:center;justify-content:center}
+.pitch{position:absolute;inset:6% 4%;border-radius:50%/42%;background:radial-gradient(ellipse at center,var(--pitch2),var(--pitch) 60%,transparent 72%);
+  box-shadow:0 0 80px rgba(200,244,58,.1);transform:perspective(700px) rotateX(58deg)}
+.pitch::before{content:"";position:absolute;left:50%;top:6%;bottom:6%;width:15%;transform:translateX(-50%);background:linear-gradient(180deg,#c9b27a,#a68f5b);border-radius:6px;opacity:.85}
+.ball{position:relative;width:132px;height:132px;border-radius:50%;background:radial-gradient(circle at 30% 26%,#ff9a9a 0,#e0313f 34%,#8d1020 72%,#4a0610 100%);
+  box-shadow:0 30px 50px rgba(0,0,0,.55),0 0 60px rgba(255,77,95,.4),inset -10px -14px 26px rgba(0,0,0,.45),inset 8px 8px 18px rgba(255,255,255,.22);animation:float 4.2s ease-in-out infinite}
+.ball::before,.ball::after{content:"";position:absolute;top:8%;bottom:8%;width:34%;border:2px dashed rgba(255,235,210,.7);border-radius:50%}
+.ball::before{left:-14%;border-left:0;border-top:0;border-bottom:0;border-right-width:2px}
+.ball::after{right:-14%;border-right:0;border-top:0;border-bottom:0;border-left-width:2px}
+@keyframes float{50%{transform:translateY(-14px) rotate(8deg)}}
+.hero-stat{position:absolute;padding:10px 14px;border-radius:14px}
+.hero-stat b{display:block;font-family:var(--display);font-size:26px;line-height:1}
+.hero-stat span{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.feat{display:flex;flex-direction:column;gap:8px}
+.feat .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:rgba(200,244,58,.1);border:1px solid rgba(200,244,58,.25)}
+.feat p{margin:0;color:var(--muted);font-size:14px}
+
+/* scoreboard */
+.sb-team{font-family:var(--display);font-size:22px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.sb-score{font-family:var(--display);font-weight:800;font-size:clamp(66px,16vw,108px);line-height:.95;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.sb-score small{font-size:.38em;color:var(--muted);font-weight:700;margin-left:8px}
+.statbox{background:rgba(0,0,0,.26);border:1px solid var(--line);border-radius:14px;padding:10px 12px;text-align:center}
+.statbox b{display:block;font-family:var(--display);font-size:26px;line-height:1.05}
+.statbox span{font-size:10.5px;color:var(--muted);font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.banner{padding:10px 14px;border-radius:12px;font-weight:800;text-align:center;color:#10200a;background:linear-gradient(180deg,#dcff6b,var(--lime));box-shadow:0 8px 22px rgba(200,244,58,.2)}
+.banner.blue{background:linear-gradient(180deg,#9bdcff,var(--blue))}
+.freehit{background:linear-gradient(180deg,#ffd37a,var(--amber))}
+table.sc{width:100%;border-collapse:collapse;font-size:14px}
+table.sc th{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 6px;font-weight:800}
+table.sc td{padding:8px 6px;text-align:right;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.sc th:first-child,table.sc td:first-child{text-align:left}
+table.sc td:first-child{font-weight:700;min-width:110px}
+table.sc .sub{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
+.scroll-x{overflow-x:auto}
+.bubbles{display:flex;gap:7px;flex-wrap:wrap}
+.bb{min-width:34px;height:34px;padding:0 6px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:13px;background:rgba(255,255,255,.08);border:1px solid var(--line);font-family:var(--display);font-size:16px}
+.bb.f4{background:linear-gradient(180deg,#8fe3ff,var(--blue));color:#04202e;border-color:transparent}
+.bb.f6{background:linear-gradient(180deg,#ffd37a,var(--amber));color:#331d00;border-color:transparent;box-shadow:0 0 14px rgba(255,178,36,.5)}
+.bb.w{background:linear-gradient(180deg,#ff7482,var(--red));color:#fff;border-color:transparent}
+.bb.x{background:rgba(200,244,58,.16);color:var(--lime);border-color:rgba(200,244,58,.4)}
+.bb.d{color:var(--dim)}
+
+/* keypad */
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.key{min-height:64px;border-radius:18px;border:1px solid var(--line);cursor:pointer;font-family:var(--display);font-size:34px;font-weight:800;color:var(--text);
+  background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,.04));box-shadow:0 6px 16px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.22);transition:transform .12s,filter .15s;touch-action:manipulation}
+.key:hover{filter:brightness(1.15)} .key:active{transform:scale(.95)}
+.key.k4{color:#04202e;border-color:transparent;background:linear-gradient(180deg,#a8ebff,var(--blue) 60%,#2b9fd6)}
+.key.k6{color:#331d00;border-color:transparent;background:linear-gradient(180deg,#ffdc8f,var(--amber) 60%,#d98a00)}
+.key:disabled{opacity:.35;cursor:not-allowed}
+.modes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.mode{min-height:44px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);font-weight:800;font-size:13px;cursor:pointer;color:var(--muted)}
+.mode[aria-pressed=true]{color:#10200a;background:linear-gradient(180deg,#dcff6b,var(--lime));border-color:transparent}
+.mode.wk{color:#ffd9dd;border-color:rgba(255,77,95,.5)}
+.mode.wk:hover{background:rgba(255,77,95,.25)}
+
+/* lists */
+.comm{display:flex;flex-direction:column}
+.comm-i{display:grid;grid-template-columns:52px 40px minmax(0,1fr);gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);font-size:14px}
+.comm-i:first-child{border-top:0}
+.comm-i .ov{font-family:var(--display);font-size:18px;color:var(--muted)}
+.match-card{display:flex;flex-direction:column;gap:12px}
+.mc-teams{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+.mc-t{font-weight:700;overflow-wrap:anywhere}
+.mc-s{font-family:var(--display);font-size:30px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+.mc-s small{font-size:14px;color:var(--muted);margin-left:4px}
+.win{color:var(--lime)}
+.result{color:var(--lime);font-weight:800}
+.empty{text-align:center;padding:34px 16px;color:var(--muted)}
+.empty b{display:block;font-family:var(--display);font-size:26px;color:var(--text);text-transform:uppercase;margin-bottom:6px}
+.lb-i{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.lb-i:first-child{border-top:0}
+.lb-r{font-family:var(--display);font-size:20px;color:var(--dim)}
+.lb-i:first-child .lb-r{color:var(--amber)}
+.lb-v{font-family:var(--display);font-size:26px;font-weight:800}
+.chart{width:100%;height:auto;display:block}
+
+/* modal, toast, fx */
+.scrim{position:fixed;inset:0;z-index:80;background:rgba(2,8,6,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px));animation:fade .18s}
+@keyframes fade{from{opacity:0}}
+.modal{width:min(560px,100%);max-height:100%;overflow:auto;background:linear-gradient(160deg,#143d2b,#0a2217);border:1px solid var(--line);border-radius:22px;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.16);animation:rise .22s cubic-bezier(.2,.9,.3,1.2)}
+.modal.wide{width:min(820px,100%)}
+@keyframes rise{from{transform:translateY(18px) scale(.97);opacity:0}}
+.toast{position:fixed;left:50%;bottom:calc(86px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;padding:11px 18px;border-radius:14px;background:rgba(10,30,22,.96);border:1px solid var(--line);box-shadow:0 14px 40px rgba(0,0,0,.5);font-weight:700;max-width:calc(100% - 32px);text-align:center}
+.fx{position:fixed;inset:0;z-index:70;pointer-events:none;display:grid;place-items:center}
+.fx b{font-family:var(--display);font-style:italic;font-weight:800;font-size:clamp(90px,26vw,220px);text-transform:uppercase;line-height:1;animation:pop 1.05s cubic-bezier(.2,.9,.3,1.1) forwards;text-shadow:0 10px 60px rgba(0,0,0,.6)}
+.fx.f4 b{color:var(--blue);filter:drop-shadow(0 0 30px rgba(89,198,255,.7))}
+.fx.f6 b{color:var(--amber);filter:drop-shadow(0 0 34px rgba(255,178,36,.8))}
+.fx.w b{color:var(--red);filter:drop-shadow(0 0 30px rgba(255,77,95,.8))}
+@keyframes pop{0%{transform:scale(.4) rotate(-6deg);opacity:0}25%{transform:scale(1.08) rotate(-2deg);opacity:1}75%{opacity:1}100%{transform:scale(1.2) rotate(-2deg);opacity:0}}
+canvas.confetti{position:fixed;inset:0;width:100%;height:100%;z-index:75;pointer-events:none}
+.mt{margin-top:14px}.mt8{margin-top:8px}.right{text-align:right}.sm{font-size:13px}.xs{font-size:12px}
+.sp{flex:1}
+.footer{padding:40px 0 10px;text-align:center;color:var(--dim);font-size:12px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+
+<div id="app"></div>
+<script>
+/* ===== Turf Wars: storage + scoring engine ===== */
+const LS_KEY = 'turfwars.v2';
+let DB = { matches: [], activeId: null, prefs: { sound: true } };
+let bc = null;
+try { bc = new BroadcastChannel('turfwars'); } catch (e) { bc = null; }
+
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && Array.isArray(d.matches)) DB = Object.assign({ matches: [], activeId: null, prefs: { sound: true } }, d);
+    }
+  } catch (e) { /* storage unavailable: keep in-memory state */ }
+}
+function saveDB() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(DB)); } catch (e) { /* ignore */ }
+  try { if (bc) bc.postMessage({ t: 'sync', at: Date.now() }); } catch (e) { /* ignore */ }
+}
+const uid = () => Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const oversText = b => Math.floor(b / 6) + '.' + (b % 6);
+const getMatch = id => DB.matches.find(m => m.id === id) || null;
+const cur = m => m.innings[m.cur];
+const maxWkts = m => Math.max(1, m.ppt - 1);
+
+function cleanNames(text) {
+  const seen = new Set(); const out = [];
+  String(text || '').split(/[\n,]+/).forEach(s => {
+    const n = s.trim().replace(/\s+/g, ' ').slice(0, 24);
+    if (n && !seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); out.push(n); }
+  });
+  return out;
+}
+function buildRoster(team, typed, ppt) {
+  const list = cleanNames(typed).slice(0, ppt);
+  let i = 1;
+  while (list.length < ppt) {
+    let n = team + ' ' + i++;
+    while (list.some(x => x.toLowerCase() === n.toLowerCase())) n = team + ' ' + i++;
+    list.push(n);
+  }
+  return list;
+}
+function newInnings(bat, bowl) {
+  return { bat, bowl, runs: 0, wickets: 0, balls: 0, extras: { wd: 0, nb: 0, b: 0, lb: 0 },
+    striker: null, nonStriker: null, bowler: null, lastBowler: null,
+    batters: [], bowlers: [], fow: [], events: [], overs: [], freeHit: false, finished: false, partnership: { runs: 0, balls: 0 } };
+}
+
+function createMatch(o) {
+  const names = [o.names[0].trim() || 'Team A', o.names[1].trim() || 'Team B'];
+  if (names[0].toLowerCase() === names[1].toLowerCase()) names[1] += ' 2';
+  const ppt = Math.min(11, Math.max(2, o.ppt || 8));
+  const rosters = [buildRoster(names[0], o.players[0], ppt), buildRoster(names[1], o.players[1], ppt)];
+  const winner = o.tossWinner === 1 ? 1 : 0;
+  const first = o.tossChoice === 'bowl' ? 1 - winner : winner;
+  const m = {
+    id: uid(), createdAt: Date.now(), updatedAt: Date.now(), names, rosters, ppt,
+    maxOvers: Math.min(50, Math.max(1, o.overs || 6)), venue: (o.venue || '').trim().slice(0, 40),
+    rules: { wide: o.wide, noball: o.noball, freeHit: !!o.freeHit },
+    toss: { winner, choice: o.tossChoice === 'bowl' ? 'bowl' : 'bat' },
+    cur: 0, target: null, finished: false, status: 'live', result: null, resultText: '',
+    innings: [newInnings(first, 1 - first), newInnings(1 - first, first)],
+    queue: [{ type: 'openers' }], undo: []
+  };
+  DB.matches.unshift(m); DB.activeId = m.id; saveDB();
+  return m;
+}
+
+function snapshot(m) { const s = clone(Object.assign({}, m, { undo: [] })); return JSON.stringify(s); }
+function pushUndo(m) { m.undo.push(snapshot(m)); if (m.undo.length > 30) m.undo.shift(); }
+function undoLast(m) {
+  if (!m.undo.length) return false;
+  const prev = JSON.parse(m.undo.pop());
+  const keep = m.undo;
+  Object.keys(m).forEach(k => delete m[k]);
+  Object.assign(m, prev); m.undo = keep; m.updatedAt = Date.now();
+  saveDB(); return true;
+}
+function touch(m) { m.updatedAt = Date.now(); saveDB(); }
+
+function bat(inn, name) {
+  let b = inn.batters.find(x => x.name === name);
+  if (!b) { b = { name, runs: 0, balls: 0, fours: 0, sixes: 0, out: false, how: '' }; inn.batters.push(b); }
+  return b;
+}
+function bowl(inn, name) {
+  let b = inn.bowlers.find(x => x.name === name);
+  if (!b) { b = { name, balls: 0, runs: 0, wkts: 0, wd: 0, nb: 0, dots: 0 }; inn.bowlers.push(b); }
+  return b;
+}
+const teamOf = (m, inn) => m.names[inn.bat];
+const availableBatters = (m, inn) => m.rosters[inn.bat].filter(n => !inn.batters.some(b => b.name === n));
+const eligibleBowlers = (m, inn) => m.rosters[inn.bowl].filter(n => n !== inn.lastBowler);
+
+function pending(m) { return m.queue && m.queue.length ? m.queue[0] : null; }
+
+function setOpeners(m, s, n) {
+  const inn = cur(m);
+  if (!s || !n || s === n) return false;
+  inn.striker = s; inn.nonStriker = n; bat(inn, s); bat(inn, n);
+  m.queue.shift(); m.queue.push({ type: 'bowler' }); touch(m); return true;
+}
+function setBowler(m, name) {
+  const inn = cur(m);
+  if (!name || name === inn.lastBowler) return false;
+  inn.bowler = name; bowl(inn, name);
+  inn.overs.push({ bowler: name, balls: [], runs: 0 });
+  m.queue.shift(); touch(m); return true;
+}
+function setNewBatter(m, name) {
+  const inn = cur(m);
+  if (!name) return false;
+  bat(inn, name);
+  if (inn.striker === null) inn.striker = name; else if (inn.nonStriker === null) inn.nonStriker = name; else return false;
+  inn.partnership = { runs: 0, balls: 0 };
+  m.queue.shift(); touch(m); return true;
+}
+function startSecondInnings(m) {
+  m.cur = 1; m.queue = [{ type: 'openers' }]; touch(m);
+}
+
+const HOW = { bowled: 'b', caught: 'c', lbw: 'lbw', stumped: 'st', runout: 'run out', hitwicket: 'hit wicket' };
+
+/* d = { ext: null|'wd'|'nb'|'b'|'lb', runs: int, wkt: null|{kind, out:'striker'|'non'} } */
+function deliver(m, d) {
+  if (m.finished || pending(m)) return { ok: false, msg: 'Finish the current prompt first.' };
+  const inn = cur(m);
+  if (inn.finished) return { ok: false, msg: 'This innings is over.' };
+  const ext = d.ext || null; const r = Math.max(0, Math.min(7, d.runs | 0));
+  const wkt = d.wkt || null;
+  if (wkt) {
+    if (inn.freeHit && wkt.kind !== 'runout') return { ok: false, msg: 'Free hit: only a run out is possible.' };
+    if (ext === 'nb' && wkt.kind !== 'runout') return { ok: false, msg: 'Off a no-ball only a run out is possible.' };
+    if (ext === 'wd' && !['runout', 'stumped'].includes(wkt.kind)) return { ok: false, msg: 'Off a wide only a stumping or run out is possible.' };
+    if ((ext === 'b' || ext === 'lb') && wkt.kind !== 'runout') return { ok: false, msg: 'Off byes only a run out is possible.' };
+  }
+  pushUndo(m);
+  const legal = ext !== 'wd' && ext !== 'nb';
+  const ballsBefore = inn.balls;
+  const striker = bat(inn, inn.striker); const bw = bowl(inn, inn.bowler);
+  let batRuns = 0, extraRuns = 0;
+  if (!ext) batRuns = r;
+  else if (ext === 'nb') { batRuns = r; extraRuns = m.rules.noball; }
+  else if (ext === 'wd') extraRuns = m.rules.wide + r;
+  else extraRuns = r; // byes / leg byes
+  const total = batRuns + extraRuns;
+
+  inn.runs += total; inn.partnership.runs += total;
+  if (ext !== 'wd') { striker.balls += 1; inn.partnership.balls += 1; }
+  striker.runs += batRuns;
+  if (batRuns === 4) striker.fours += 1;
+  if (batRuns === 6) striker.sixes += 1;
+  if (ext === 'wd') { inn.extras.wd += extraRuns; bw.wd += extraRuns; bw.runs += extraRuns; }
+  else if (ext === 'nb') { inn.extras.nb += extraRuns; bw.nb += extraRuns; bw.runs += extraRuns + batRuns; }
+  else if (ext === 'b') inn.extras.b += extraRuns;
+  else if (ext === 'lb') inn.extras.lb += extraRuns;
+  else bw.runs += batRuns;
+  if (legal) { inn.balls += 1; bw.balls += 1; if (total === 0) bw.dots += 1; }
+
+  // label + commentary
+  let label, cls;
+  if (wkt) { label = 'W'; cls = 'w'; }
+  else if (ext === 'wd') { label = 'Wd' + (r ? '+' + r : ''); cls = 'x'; }
+  else if (ext === 'nb') { label = 'Nb' + (r ? '+' + r : ''); cls = r === 6 ? 'f6' : r === 4 ? 'f4' : 'x'; }
+  else if (ext === 'b') { label = 'B' + r; cls = 'x'; }
+  else if (ext === 'lb') { label = 'Lb' + r; cls = 'x'; }
+  else { label = r === 0 ? '•' : String(r); cls = r === 6 ? 'f6' : r === 4 ? 'f4' : r === 0 ? 'd' : ''; }
+  const sName = striker.name, bName = inn.bowler;
+  let text;
+  if (wkt) text = 'OUT! ' + (wkt.kind === 'runout' ? 'Run out' : wkt.kind === 'hitwicket' ? 'Hit wicket' : wkt.kind[0].toUpperCase() + wkt.kind.slice(1)) + ', ' + (wkt.out === 'non' ? inn.nonStriker : sName) + ' departs' + (total ? ' (' + total + ' run' + (total > 1 ? 's' : '') + ' taken)' : '');
+  else if (ext === 'wd') text = 'Wide, ' + extraRuns + ' run' + (extraRuns > 1 ? 's' : '');
+  else if (ext === 'nb') text = 'No-ball' + (r ? ', ' + sName + ' hits ' + r : '') + (m.rules.freeHit ? ', free hit next' : '');
+  else if (ext === 'b' || ext === 'lb') text = (ext === 'b' ? 'Bye' : 'Leg bye') + ', ' + r + ' run' + (r > 1 ? 's' : '');
+  else if (r === 6) text = 'SIX! ' + sName + ' sends ' + bName + ' into the stands';
+  else if (r === 4) text = 'FOUR! ' + sName + ' finds the rope';
+  else if (r === 0) text = 'Dot ball, ' + bName + ' to ' + sName;
+  else text = sName + ' takes ' + r + ' run' + (r > 1 ? 's' : '');
+  const ovLabel = Math.floor(ballsBefore / 6) + '.' + ((ballsBefore % 6) + 1);
+  const ev = { ov: ovLabel, label, cls, text, runs: total, score: inn.runs + '/' + inn.wickets };
+  const ovObj = inn.overs[inn.overs.length - 1];
+  if (ovObj) { ovObj.balls.push({ l: label, c: cls }); ovObj.runs += total; }
+
+  const origNon = inn.nonStriker;
+  // strike rotation for completed runs
+  if (r % 2 === 1) { const t = inn.striker; inn.striker = inn.nonStriker; inn.nonStriker = t; }
+
+  // wicket
+  let needBatter = false;
+  if (wkt) {
+    const realOut = wkt.out === 'non' ? origNon : sName;
+    const victim = bat(inn, realOut);
+    victim.out = true;
+    victim.how = wkt.kind === 'runout' ? 'run out' : (HOW[wkt.kind] === 'c' ? 'c & b ' + bName : HOW[wkt.kind] + ' ' + bName);
+    if (wkt.kind === 'caught') victim.how = 'c ' + (wkt.fielder ? wkt.fielder + ' ' : '') + 'b ' + bName;
+    if (wkt.kind === 'stumped') victim.how = 'st b ' + bName;
+    if (wkt.kind === 'runout') victim.how = 'run out' + (wkt.fielder ? ' (' + wkt.fielder + ')' : '');
+    inn.wickets += 1;
+    if (wkt.kind !== 'runout') bw.wkts += 1;
+    inn.fow.push({ n: inn.wickets, runs: inn.runs, name: realOut, ov: oversText(inn.balls) });
+    if (inn.striker === realOut) inn.striker = null; else if (inn.nonStriker === realOut) inn.nonStriker = null;
+    needBatter = true;
+    ev.score = inn.runs + '/' + inn.wickets;
+  }
+  // free hit bookkeeping
+  if (ext === 'nb') inn.freeHit = m.rules.freeHit; else if (legal) inn.freeHit = false;
+
+  // end of over swap
+  const overDone = legal && inn.balls % 6 === 0;
+  if (overDone) { const t = inn.striker; inn.striker = inn.nonStriker; inn.nonStriker = t; inn.lastBowler = inn.bowler; }
+
+  inn.events.unshift(ev); if (inn.events.length > 240) inn.events.pop();
+
+  // innings / match end checks
+  let ended = null;
+  if (m.cur === 1 && m.target !== null && inn.runs >= m.target) ended = 'chase';
+  else if (inn.wickets >= maxWkts(m)) ended = 'allout';
+  else if (inn.balls >= m.maxOvers * 6) ended = 'overs';
+  if (ended) {
+    endInnings(m, ended);
+  } else {
+    if (needBatter) m.queue.push({ type: 'batter' });
+    if (overDone) m.queue.push({ type: 'bowler' });
+  }
+  const fx = wkt ? 'w' : (cls === 'f6' ? 'f6' : cls === 'f4' ? 'f4' : null);
+  touch(m);
+  return { ok: true, fx, ended };
+}
+
+function endInnings(m, why) {
+  const inn = cur(m);
+  inn.finished = true; inn.endReason = why; m.queue = [];
+  if (m.cur === 0) {
+    m.target = inn.runs + 1;
+    m.queue = [{ type: 'break' }];
+  } else finishMatch(m, true);
+}
+
+function finishMatch(m, natural) {
+  if (m.finished) return;
+  m.queue = [];
+  m.innings.forEach(i => { i.finished = true; });
+  m.finished = true; m.status = 'completed';
+  const a = m.innings[0], b = m.innings[1];
+  const secondStarted = m.cur === 1 && (b.balls > 0 || b.runs > 0);
+  if (!secondStarted && !(natural && m.cur === 1)) {
+    if (m.cur === 0 && a.balls === 0 && a.runs === 0) { m.result = null; m.resultText = 'Match abandoned'; }
+    else { m.result = null; m.resultText = 'No result'; }
+    return;
+  }
+  if (b.runs > a.runs) {
+    const left = maxWkts(m) - b.wickets;
+    m.result = b.bat; m.resultText = m.names[b.bat] + ' won by ' + left + ' wicket' + (left === 1 ? '' : 's');
+  } else if (a.runs > b.runs) {
+    const diff = a.runs - b.runs;
+    m.result = a.bat; m.resultText = m.names[a.bat] + ' won by ' + diff + ' run' + (diff === 1 ? '' : 's');
+  } else { m.result = null; m.resultText = 'Match tied'; }
+}
+
+function swapStrike(m) {
+  const inn = cur(m);
+  if (!inn.striker || !inn.nonStriker) return false;
+  pushUndo(m);
+  const t = inn.striker; inn.striker = inn.nonStriker; inn.nonStriker = t; touch(m); return true;
+}
+
+/* derived numbers */
+function crr(inn) { return inn.balls ? (inn.runs / inn.balls) * 6 : 0; }
+function chaseInfo(m) {
+  if (m.cur !== 1 || m.target === null) return null;
+  const inn = cur(m);
+  const need = Math.max(0, m.target - inn.runs);
+  const ballsLeft = Math.max(0, m.maxOvers * 6 - inn.balls);
+  const rrr = ballsLeft ? (need / ballsLeft) * 6 : 0;
+  return { need, ballsLeft, rrr, wktsLeft: maxWkts(m) - inn.wickets };
+}
+function projected(m) {
+  const inn = cur(m); if (!inn.balls || m.cur === 1) return null;
+  return Math.round(crr(inn) * m.maxOvers);
+}
+function lastOver(inn) { const o = inn.overs[inn.overs.length - 1]; return o ? o : null; }
+function summaryText(m) {
+  const lines = ['🏏 ' + m.names[0] + ' vs ' + m.names[1] + (m.venue ? ' @ ' + m.venue : '')];
+  m.innings.forEach((i, idx) => {
+    if (idx === 1 && m.cur === 0 && !i.balls) return;
+    lines.push(m.names[i.bat] + ': ' + i.runs + '/' + i.wickets + ' (' + oversText(i.balls) + ' ov)');
+  });
+  lines.push(m.finished ? m.resultText : (m.target ? 'Target ' + m.target : 'Match in progress'));
+  lines.push('Scored on Turf Wars');
+  return lines.join('\n');
+}
+
+/* career-style stats across all saved matches */
+function aggregateStats() {
+  const bats = {}, bowls = {}, teams = {};
+  DB.matches.forEach(m => {
+    m.names.forEach(n => { teams[n] = teams[n] || { name: n, p: 0, w: 0, l: 0, t: 0 }; });
+    if (m.finished && m.resultText !== 'Match abandoned' && m.resultText !== 'No result') {
+      m.names.forEach((n, i) => {
+        const t = teams[n]; t.p++;
+        if (m.result === null) t.t++; else if (m.result === i) t.w++; else t.l++;
+      });
+    }
+    m.innings.forEach(inn => {
+      inn.batters.forEach(b => {
+        const k = b.name;
+        const s = bats[k] = bats[k] || { name: k, inns: 0, runs: 0, balls: 0, fours: 0, sixes: 0, hs: 0, outs: 0 };
+        s.inns++; s.runs += b.runs; s.balls += b.balls; s.fours += b.fours; s.sixes += b.sixes; if (b.out) s.outs++;
+        s.hs = Math.max(s.hs, b.runs);
+      });
+      inn.bowlers.forEach(b => {
+        const s = bowls[b.name] = bowls[b.name] || { name: b.name, balls: 0, runs: 0, wkts: 0 };
+        s.balls += b.balls; s.runs += b.runs; s.wkts += b.wkts;
+      });
+    });
+  });
+  const B = Object.values(bats), W = Object.values(bowls);
+  return {
+    runs: B.filter(x => x.runs > 0).sort((a, b) => b.runs - a.runs).slice(0, 6),
+    sixes: B.filter(x => x.sixes > 0).sort((a, b) => b.sixes - a.sixes).slice(0, 6),
+    fours: B.filter(x => x.fours > 0).sort((a, b) => b.fours - a.fours).slice(0, 6),
+    sr: B.filter(x => x.balls >= 12).sort((a, b) => b.runs / b.balls - a.runs / a.balls).slice(0, 6),
+    wkts: W.filter(x => x.wkts > 0).sort((a, b) => b.wkts - a.wkts || a.runs - b.runs).slice(0, 6),
+    econ: W.filter(x => x.balls >= 12).sort((a, b) => a.runs / a.balls - b.runs / b.balls).slice(0, 6),
+    teams: Object.values(teams).filter(t => t.p > 0).sort((a, b) => b.w - a.w || a.l - b.l)
+  };
+}
+
+/* ===== Turf Wars: views ===== */
+const ui = {
+  route: 'home', mode: null, modal: null, histFilter: 'all', histQ: '', liveId: null, showSetup: false, celebrated: {},
+  setup: { t1: 'Team A', t2: 'Team B', overs: 6, ppt: 8, venue: '', p1: '', p2: '', tossWinner: 0, tossChoice: 'bat', wide: 1, noball: 1, freeHit: true, showPlayers: false }
+};
+const ROUTES = [['home', 'Home'], ['score', 'Scorer'], ['live', 'Live'], ['history', 'History'], ['stats', 'Stats']];
+const activeMatch = () => getMatch(DB.activeId);
+const liveMatch = () => getMatch(ui.liveId) || activeMatch() || DB.matches[0] || null;
+const sr = (r, b) => b ? (r / b * 100).toFixed(0) : '–';
+const econ = (r, b) => b ? (r / (b / 6)).toFixed(1) : '–';
+const ago = t => {
+  const s = Math.max(1, Math.round((Date.now() - t) / 1000));
+  if (s < 60) return 'just now'; if (s < 3600) return Math.round(s / 60) + ' min ago';
+  if (s < 86400) return Math.round(s / 3600) + ' h ago';
+  return new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};
+const emptyBox = (t, d, btn) => `<div class="glass empty"><b>${esc(t)}</b>${esc(d)}${btn || ''}</div>`;
+
+function bubbles(over) {
+  if (!over || !over.balls.length) return '<span class="muted sm">No balls bowled yet in this over.</span>';
+  return '<div class="bubbles">' + over.balls.map(b => `<span class="bb ${b.c}">${esc(b.l)}</span>`).join('') + '</div>';
+}
+
+/* ---------- scoreboard (shared by scorer, live, home) ---------- */
+function scoreboard(m, big) {
+  const inn = cur(m); const ci = chaseInfo(m); const pj = projected(m);
+  const live = !m.finished;
+  const status = m.finished ? `<span class="pill done">${esc(m.status === 'completed' ? 'Completed' : 'Done')}</span>` : `<span class="pill live"><i class="live-dot"></i>Live</span>`;
+  let banner = '';
+  if (m.finished) banner = `<div class="banner mt">${esc(m.resultText)}</div>`;
+  else if (ci) banner = `<div class="banner blue mt">${esc(m.names[inn.bat])} need ${ci.need} run${ci.need === 1 ? '' : 's'} from ${ci.ballsLeft} ball${ci.ballsLeft === 1 ? '' : 's'}</div>`;
+  else if (m.target === null && inn.balls) banner = '';
+  const fh = live && inn.freeHit ? '<div class="banner freehit mt8">FREE HIT: only a run out counts</div>' : '';
+  const part = inn.partnership;
+  return `<div class="glass">
+    <div class="row between">
+      <div><div class="eyebrow">${m.cur === 0 ? '1st innings' : '2nd innings'}${m.venue ? ' · ' + esc(m.venue) : ''}</div>
+      <div class="sb-team">${esc(m.names[inn.bat])}</div></div>${status}
+    </div>
+    <div class="sb-score mt8">${inn.runs}/${inn.wickets}<small>${oversText(inn.balls)} / ${m.maxOvers} ov</small></div>
+    <div class="grid g4 mt" style="gap:8px">
+      <div class="statbox"><b>${crr(inn).toFixed(2)}</b><span>Run rate</span></div>
+      <div class="statbox"><b>${ci ? ci.rrr.toFixed(2) : (pj !== null ? pj : '–')}</b><span>${ci ? 'Req. rate' : 'Projected'}</span></div>
+      <div class="statbox"><b>${m.target !== null ? m.target : '–'}</b><span>Target</span></div>
+      <div class="statbox"><b>${part.runs}<small class="muted" style="font-size:14px"> (${part.balls})</small></b><span>Partnership</span></div>
+    </div>${banner}${fh}
+  </div>`;
+}
+
+/* ---------- scorecard tables ---------- */
+function batTable(m, inn, full) {
+  const list = full ? inn.batters : inn.batters.filter(b => b.name === inn.striker || b.name === inn.nonStriker);
+  if (!list.length) return '<div class="muted sm">No batters yet.</div>';
+  const rows = list.map(b => {
+    const at = b.name === inn.striker, non = b.name === inn.nonStriker;
+    const how = b.out ? b.how : (inn.finished ? 'not out' : (at || non ? 'batting' : ''));
+    return `<tr><td>${esc(b.name)}${at && !inn.finished ? ' <span class="win">*</span>' : ''}<span class="sub">${esc(how)}</span></td><td><b>${b.runs}</b></td><td>${b.balls}</td><td>${b.fours}</td><td>${b.sixes}</td><td>${sr(b.runs, b.balls)}</td></tr>`;
+  }).join('');
+  return `<div class="scroll-x"><table class="sc"><thead><tr><th>Batter</th><th>R</th><th>B</th><th>4s</th><th>6s</th><th>SR</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function bowlTable(inn, onlyCurrent) {
+  const list = onlyCurrent ? inn.bowlers.filter(b => b.name === inn.bowler) : inn.bowlers;
+  if (!list.length) return '<div class="muted sm">No bowlers yet.</div>';
+  const rows = list.map(b => `<tr><td>${esc(b.name)}${b.name === inn.bowler && !inn.finished ? ' <span class="win">●</span>' : ''}</td><td>${oversText(b.balls)}</td><td>${b.dots}</td><td>${b.runs}</td><td><b>${b.wkts}</b></td><td>${econ(b.runs, b.balls)}</td></tr>`).join('');
+  return `<div class="scroll-x"><table class="sc"><thead><tr><th>Bowler</th><th>O</th><th>Dots</th><th>R</th><th>W</th><th>Econ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function fullCard(m, inn, idx) {
+  const started = inn.batters.length > 0;
+  const ex = inn.extras; const exT = ex.wd + ex.nb + ex.b + ex.lb;
+  const yet = m.rosters[inn.bat].filter(n => !inn.batters.some(b => b.name === n));
+  return `<div class="stack">
+    <div class="row between"><h3>${esc(m.names[inn.bat])} · Innings ${idx + 1}</h3><span class="num" style="font-size:26px">${inn.runs}/${inn.wickets} <span class="muted" style="font-size:15px">(${oversText(inn.balls)} ov)</span></span></div>
+    ${started ? batTable(m, inn, true) : '<div class="muted sm">Yet to bat.</div>'}
+    ${started ? `<div class="sm"><b>Extras ${exT}</b> <span class="muted">(wd ${ex.wd}, nb ${ex.nb}, b ${ex.b}, lb ${ex.lb})</span></div>` : ''}
+    ${yet.length && started ? `<div class="sm muted"><b style="color:var(--text)">Did not bat:</b> ${yet.map(esc).join(', ')}</div>` : ''}
+    ${inn.fow.length ? `<div class="sm muted"><b style="color:var(--text)">Fall of wickets:</b> ${inn.fow.map(f => `${f.runs}-${f.n} (${esc(f.name)}, ${f.ov})`).join(', ')}</div>` : ''}
+    ${started ? bowlTable(inn, false) : ''}
+  </div>`;
+}
+
+/* ---------- worm chart ---------- */
+function wormChart(m) {
+  const W = 640, H = 260, L = 38, R = 14, T = 16, B = 30;
+  const series = m.innings.map(inn => {
+    const pts = [0]; let c = 0;
+    inn.overs.forEach(o => { c += o.runs; pts.push(c); });
+    return { pts, bat: inn.bat, started: inn.balls > 0 };
+  });
+  const ymaxRaw = Math.max(10, ...series.map(s => s.pts[s.pts.length - 1]), m.target || 0);
+  const step = ymaxRaw > 120 ? 40 : ymaxRaw > 60 ? 20 : 10;
+  const ymax = Math.ceil(ymaxRaw / step) * step;
+  const X = i => L + (i / m.maxOvers) * (W - L - R), Y = v => T + (1 - v / ymax) * (H - T - B);
+  let g = '';
+  for (let v = 0; v <= ymax; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="rgba(255,255,255,.1)"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end" fill="#90ab9d" font-size="11">${v}</text>`;
+  const xs = m.maxOvers <= 10 ? 1 : m.maxOvers <= 20 ? 2 : 5;
+  for (let i = 0; i <= m.maxOvers; i += xs) g += `<text x="${X(i)}" y="${H - 9}" text-anchor="middle" fill="#90ab9d" font-size="11">${i}</text>`;
+  let lines = ''; const cols = ['#c8f43a', '#59c6ff'];
+  series.forEach((s, i) => {
+    if (!s.started) return;
+    const d = s.pts.map((v, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
+    const last = s.pts.length - 1;
+    lines += `<path d="${d}" fill="none" stroke="${cols[i]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${X(last).toFixed(1)}" cy="${Y(s.pts[last]).toFixed(1)}" r="5" fill="${cols[i]}" stroke="#05120d" stroke-width="2"/>`;
+  });
+  let tg = '';
+  if (m.target) tg = `<line x1="${L}" x2="${W - R}" y1="${Y(m.target)}" y2="${Y(m.target)}" stroke="#ffb224" stroke-dasharray="5 5"/><text x="${W - R}" y="${Y(m.target) - 6}" text-anchor="end" fill="#ffb224" font-size="11">Target ${m.target}</text>`;
+  const legend = series.map((s, i) => s.started ? `<span class="row" style="gap:6px"><i style="width:14px;height:4px;border-radius:2px;background:${cols[i]};display:inline-block"></i><span class="sm">${esc(m.names[s.bat])}</span></span>` : '').join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative runs by over for each innings">${g}${tg}${lines}<text x="${L}" y="10" fill="#90ab9d" font-size="11">Runs</text></svg><div class="row" style="gap:16px;margin-top:6px">${legend}<span class="muted xs">Overs →</span></div>`;
+}
+
+function commentary(inn, limit) {
+  if (!inn.events.length) return '<div class="muted sm">Commentary appears here after the first ball.</div>';
+  return '<div class="comm">' + inn.events.slice(0, limit).map(e => `<div class="comm-i"><span class="ov">${e.ov}</span><span class="bb ${e.cls}">${esc(e.label)}</span><span>${esc(e.text)} <span class="muted xs">· ${esc(e.score)}</span></span></div>`).join('') + '</div>';
+}
+
+function matchCard(m, actions) {
+  const rows = m.innings.map((inn, i) => {
+    if (i === 1 && !inn.balls && !m.finished && m.cur === 0) return `<div class="mc-t muted">${esc(m.names[inn.bat])}</div><div class="mc-s muted">yet to bat</div>`;
+    const win = m.finished && m.result === inn.bat;
+    return `<div class="mc-t ${win ? 'win' : ''}">${esc(m.names[inn.bat])}${win ? ' 🏆' : ''}</div><div class="mc-s">${inn.runs}/${inn.wickets}<small>${oversText(inn.balls)} ov</small></div>`;
+  }).join('');
+  return `<div class="glass match-card">
+    <div class="row between"><span class="muted xs">${ago(m.updatedAt)}${m.venue ? ' · ' + esc(m.venue) : ''} · ${m.maxOvers} overs</span>${m.finished ? '<span class="pill done">Completed</span>' : '<span class="pill live"><i class="live-dot"></i>Live</span>'}</div>
+    <div class="mc-teams">${rows}</div>
+    <div class="result sm">${esc(m.finished ? m.resultText : (m.target ? esc(m.names[cur(m).bat]) + ' chasing ' + m.target : 'Match in progress'))}</div>
+    ${actions || ''}</div>`;
+}
+
+/* ---------- pages ---------- */
+function pageHome() {
+  const am = activeMatch(); const recent = DB.matches.filter(x => x.finished).slice(0, 3);
+  const live = am && !am.finished ? am : null;
+  const st = aggregateStats();
+  const totalRuns = DB.matches.reduce((s, m) => s + m.innings.reduce((a, i) => a + i.runs, 0), 0);
+  return `<section class="hero">
+    <div>
+      <div class="eyebrow">The game is yours</div>
+      <h1>Play hard.<br><span>Score big.</span></h1>
+      <p>Ball-by-ball scoring for turf cricket. Track batters, bowlers, extras and free hits, then share a live scoreboard and keep every match in your history.</p>
+      <div class="row">
+        <button class="btn btn-p" data-act="go" data-v="score">${live ? 'Resume scoring' : 'Start a match'} →</button>
+        <button class="btn" data-act="go" data-v="live">Open live board</button>
+      </div>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="pitch"></div><div class="ball"></div>
+      <div class="glass hero-stat" style="left:0;top:8%"><b class="win">${DB.matches.length}</b><span>Matches</span></div>
+      <div class="glass hero-stat" style="right:0;bottom:10%"><b>${totalRuns}</b><span>Runs scored</span></div>
+    </div>
+  </section>
+  ${live ? `<div class="sec"><div class="sec-h"><div><div class="eyebrow">Happening now</div><h2>Live match</h2></div></div>${scoreboard(live)}
+    <div class="row mt"><button class="btn btn-p" data-act="go" data-v="score">Continue scoring</button><button class="btn" data-act="open-live" data-id="${live.id}">Watch live board</button></div></div>` : ''}
+  <div class="sec"><div class="sec-h"><div><div class="eyebrow">Match day starts here</div><h2>Built for turf cricket</h2></div></div>
+    <div class="grid g3 collapse">
+      <div class="glass feat"><div class="ic">🏏</div><h3>Ball-by-ball scorer</h3><p>Runs, wides, no-balls, byes, leg byes and every dismissal. Strike rotates by itself and undo is always one tap away.</p></div>
+      <div class="glass feat"><div class="ic">📡</div><h3>Live scoreboard</h3><p>A big-screen view with run rate, required rate, partnership, worm chart and commentary. Open it on a second tab or device screen.</p></div>
+      <div class="glass feat"><div class="ic">🏆</div><h3>History and stats</h3><p>Full scorecards for every match, plus leaderboards for runs, sixes, wickets and strike rate across your games.</p></div>
+    </div></div>
+  ${recent.length ? `<div class="sec"><div class="sec-h"><div><div class="eyebrow">Latest results</div><h2>Recent matches</h2></div><button class="btn btn-sm" data-act="go" data-v="history">All matches →</button></div>
+    <div class="grid g3 collapse">${recent.map(m => matchCard(m, `<button class="btn btn-sm" data-act="view-card" data-id="${m.id}">Scorecard</button>`)).join('')}</div></div>` : ''}
+  ${st.runs.length ? `<div class="sec"><div class="glass row between"><div><div class="eyebrow">Orange cap</div><h3>${esc(st.runs[0].name)}</h3></div><div class="num" style="font-size:44px;color:var(--lime)">${st.runs[0].runs}<span class="muted" style="font-size:16px"> runs</span></div></div></div>` : ''}`;
+}
+
+function setupForm() {
+  const s = ui.setup; const am = activeMatch();
+  const oversOpts = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20].map(o => `<option value="${o}" ${s.overs === o ? 'selected' : ''}>${o} over${o > 1 ? 's' : ''}</option>`).join('');
+  const pptOpts = [3, 4, 5, 6, 7, 8, 9, 10, 11].map(o => `<option value="${o}" ${s.ppt === o ? 'selected' : ''}>${o} a side</option>`).join('');
+  const tn = [s.t1.trim() || 'Team A', s.t2.trim() || 'Team B'];
+  return `<div class="sec"><div class="sec-h"><div><div class="eyebrow">New match</div><h2>Set up your match</h2></div>
+      ${am && !am.finished ? '<button class="btn btn-sm" data-act="cancel-setup">← Back to live match</button>' : ''}</div>
+    <div class="cols">
+    <div class="stack">
+      <div class="glass"><h3>Teams</h3>
+        <div class="grid g2 collapse mt"><div><label class="f" for="t1">Team 1</label><input type="text" id="t1" data-f="t1" maxlength="30" value="${esc(s.t1)}"></div>
+        <div><label class="f" for="t2">Team 2</label><input type="text" id="t2" data-f="t2" maxlength="30" value="${esc(s.t2)}"></div></div>
+        <div class="grid g3 collapse mt"><div><label class="f" for="overs">Overs per innings</label><select id="overs" data-f="overs">${oversOpts}</select></div>
+        <div><label class="f" for="ppt">Team size</label><select id="ppt" data-f="ppt">${pptOpts}</select></div>
+        <div><label class="f" for="venue">Turf / venue</label><input type="text" id="venue" data-f="venue" maxlength="40" placeholder="Optional" value="${esc(s.venue)}"></div></div>
+        <div class="mt"><button class="chip" data-act="toggle-players" aria-pressed="${s.showPlayers}">${s.showPlayers ? 'Hide' : 'Add'} player names</button></div>
+        ${s.showPlayers ? `<div class="grid g2 collapse mt"><div><label class="f" for="p1">${esc(tn[0])} players</label><textarea id="p1" data-f="p1" placeholder="One name per line">${esc(s.p1)}</textarea></div>
+        <div><label class="f" for="p2">${esc(tn[1])} players</label><textarea id="p2" data-f="p2" placeholder="One name per line">${esc(s.p2)}</textarea></div></div>
+        <p class="muted xs">Missing names are filled in automatically, so you can start with none.</p>` : ''}
+      </div>
+    </div>
+    <div class="stack">
+      <div class="glass"><h3>Toss</h3>
+        <label class="f mt">Toss won by</label>
+        <div class="row"><button class="chip" data-act="setup-set" data-k="tossWinner" data-v="0" aria-pressed="${s.tossWinner === 0}">${esc(tn[0])}</button><button class="chip" data-act="setup-set" data-k="tossWinner" data-v="1" aria-pressed="${s.tossWinner === 1}">${esc(tn[1])}</button></div>
+        <label class="f mt">Elected to</label>
+        <div class="row"><button class="chip" data-act="setup-set" data-k="tossChoice" data-v="bat" aria-pressed="${s.tossChoice === 'bat'}">Bat first</button><button class="chip" data-act="setup-set" data-k="tossChoice" data-v="bowl" aria-pressed="${s.tossChoice === 'bowl'}">Bowl first</button></div>
+      </div>
+      <div class="glass"><h3>Turf rules</h3>
+        <label class="f mt">Wide adds</label>
+        <div class="row">${[0, 1, 2].map(v => `<button class="chip" data-act="setup-set" data-k="wide" data-v="${v}" aria-pressed="${s.wide === v}">${v} run${v === 1 ? '' : 's'}</button>`).join('')}</div>
+        <label class="f mt">No-ball adds</label>
+        <div class="row">${[1, 2].map(v => `<button class="chip" data-act="setup-set" data-k="noball" data-v="${v}" aria-pressed="${s.noball === v}">${v} run${v === 1 ? '' : 's'}</button>`).join('')}</div>
+        <label class="f mt">Free hit after a no-ball</label>
+        <div class="row"><button class="chip" data-act="setup-set" data-k="freeHit" data-v="1" aria-pressed="${s.freeHit}">On</button><button class="chip" data-act="setup-set" data-k="freeHit" data-v="0" aria-pressed="${!s.freeHit}">Off</button></div>
+      </div>
+      <button class="btn btn-p btn-block" style="min-height:56px;font-size:17px" data-act="start-match">Start match →</button>
+    </div></div></div>`;
+}
+
+function pageScore() {
+  const m = activeMatch();
+  if (!m || ui.showSetup) return setupForm();
+  const inn = cur(m); const over = lastOver(inn);
+  const pend = pending(m); const blocked = !!pend || m.finished;
+  const modeHint = { wd: 'Wide: tap the extra runs that were run (0 = just the wide).', nb: 'No-ball: tap the runs hit off the bat.', b: 'Byes: tap how many were run.', lb: 'Leg byes: tap how many were run.' }[ui.mode] || 'Tap the runs scored off this ball.';
+  const keys = [0, 1, 2, 3, 4, 6].map(r => `<button class="key ${r === 4 ? 'k4' : r === 6 ? 'k6' : ''}" data-act="run" data-v="${r}" ${blocked ? 'disabled' : ''} aria-label="${r} run${r === 1 ? '' : 's'}">${r === 0 ? '0' : r}</button>`).join('');
+  const modeBtn = (k, l) => `<button class="mode" data-act="mode" data-v="${k}" aria-pressed="${ui.mode === k}" ${blocked ? 'disabled' : ''}>${l}</button>`;
+  return `<div class="sec"><div class="sec-h"><div><div class="eyebrow">Live scorer</div><h2>${esc(m.names[0])} vs ${esc(m.names[1])}</h2></div>
+    <div class="row"><button class="btn btn-sm" data-act="copy-summary" data-id="${m.id}">Copy summary</button><button class="btn btn-sm" data-act="open-live" data-id="${m.id}">Live board ↗</button></div></div>
+    <div class="cols">
+      <div class="stack">
+        ${scoreboard(m)}
+        <div class="glass"><div class="eyebrow" style="margin-bottom:8px">At the crease</div>${batTable(m, inn, false)}<div class="mt">${bowlTable(inn, true)}</div>
+          <div class="eyebrow" style="margin:14px 0 8px">This over${over ? ' · ' + esc(over.bowler) : ''}</div>${bubbles(over)}</div>
+      </div>
+      <div class="stack">
+        <div class="glass"><div class="modes">
+          ${modeBtn('wd', 'Wide')}${modeBtn('nb', 'No ball')}${modeBtn('b', 'Bye')}${modeBtn('lb', 'Leg bye')}
+          <button class="mode wk" data-act="wicket" ${blocked ? 'disabled' : ''}>Wicket</button></div>
+          <p class="muted xs" style="margin:10px 0">${modeHint}</p>
+          <div class="keys">${keys}</div></div>
+        <div class="glass"><div class="grid g2" style="gap:10px">
+          <button class="btn" data-act="undo" ${m.undo.length ? '' : 'disabled'}>↶ Undo</button>
+          <button class="btn" data-act="swap" ${blocked || !inn.striker || !inn.nonStriker ? 'disabled' : ''}>⇄ Swap strike</button>
+          <button class="btn" data-act="ask" data-v="end" ${blocked ? 'disabled' : ''}>End innings</button>
+          <button class="btn btn-d" data-act="ask" data-v="finish" ${m.finished ? 'disabled' : ''}>Finish match</button></div>
+          <button class="btn btn-p btn-block mt" data-act="new-match">+ New match</button></div>
+      </div>
+    </div>
+    <div class="glass mt"><div class="row between" style="margin-bottom:6px"><h3>Commentary</h3><span class="muted xs">${esc(m.names[inn.bat])}</span></div>${commentary(inn, 14)}</div>
+  </div>`;
+}
+
+function pageLive() {
+  const m = liveMatch();
+  if (!m) return `<div class="sec">${emptyBox('No matches yet', 'Start a match in the scorer and its live board shows up here.', '<div class="mt"><button class="btn btn-p" data-act="go" data-v="score">Start a match</button></div>')}</div>`;
+  const inn = cur(m); const over = lastOver(inn);
+  const picker = DB.matches.length > 1 ? `<div class="row" style="margin-bottom:14px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px">${DB.matches.slice(0, 8).map(x => `<button class="chip" style="white-space:nowrap" data-act="open-live" data-id="${x.id}" aria-pressed="${x.id === m.id}">${x.finished ? '' : '● '}${esc(x.names[0])} v ${esc(x.names[1])}</button>`).join('')}</div>` : '';
+  return `<div class="sec"><div class="sec-h"><div><div class="eyebrow">Live cricket scoreboard</div><h2>${esc(m.names[0])} <span class="muted">vs</span> ${esc(m.names[1])}</h2></div>
+    <button class="btn btn-sm" data-act="copy-summary" data-id="${m.id}">Share summary</button></div>
+    ${picker}
+    <div class="cols"><div class="stack">${scoreboard(m)}
+      <div class="glass"><div class="eyebrow" style="margin-bottom:8px">Innings summary</div>
+        ${m.innings.map((i, k) => `<div class="row between" style="padding:10px 0;${k ? 'border-top:1px solid var(--line)' : ''}"><div><b>${esc(m.names[i.bat])}</b><div class="muted xs">Innings ${k + 1} · ${oversText(i.balls)} overs${i.finished ? ' · completed' : ''}</div></div><div class="num" style="font-size:30px">${i.balls || k === 0 ? i.runs + '/' + i.wickets : '–'}</div></div>`).join('')}
+      </div>
+      <div class="glass"><div class="eyebrow" style="margin-bottom:8px">This over</div>${bubbles(over)}</div>
+    </div>
+    <div class="stack"><div class="glass"><div class="eyebrow" style="margin-bottom:8px">At the crease</div>${batTable(m, inn, false)}<div class="mt">${bowlTable(inn, true)}</div></div>
+      <div class="glass"><div class="eyebrow" style="margin-bottom:8px">Worm chart</div>${wormChart(m)}</div></div></div>
+    <div class="glass mt"><h3 style="margin-bottom:6px">Commentary</h3>${commentary(inn, 20)}</div>
+    <p class="muted xs mt">The live board refreshes by itself when the scorer updates a match in this browser. Open it in a second tab or window to follow along.</p></div>`;
+}
+
+function pageHistory() {
+  const q = ui.histQ.trim().toLowerCase();
+  const list = DB.matches.filter(m => (ui.histFilter === 'all' || (ui.histFilter === 'live' ? !m.finished : m.finished)) && (!q || (m.names.join(' ') + ' ' + m.venue).toLowerCase().includes(q)));
+  const chips = [['all', 'All'], ['live', 'In progress'], ['done', 'Completed']].map(([k, l]) => `<button class="chip" data-act="hist-filter" data-v="${k}" aria-pressed="${ui.histFilter === k}">${l}</button>`).join('');
+  return `<div class="sec"><div class="sec-h"><div><div class="eyebrow">Every match. Every score.</div><h2>Match history</h2><div class="muted sm" style="margin-top:6px">${DB.matches.length} match${DB.matches.length === 1 ? '' : 'es'} saved on this device</div></div>
+    <button class="btn btn-sm" data-act="backup">Backup / restore</button></div>
+    <div class="row" style="margin-bottom:14px"><input type="text" id="hq" data-f="hq" placeholder="Search teams or venue" value="${esc(ui.histQ)}" style="max-width:280px">${chips}</div>
+    ${list.length ? `<div class="grid g2 collapse">${list.map(m => matchCard(m, `<div class="row">
+      <button class="btn btn-sm" data-act="view-card" data-id="${m.id}">Scorecard</button>
+      <button class="btn btn-sm" data-act="open-live" data-id="${m.id}">Live board</button>
+      ${m.finished ? '' : `<button class="btn btn-sm btn-p" data-act="resume" data-id="${m.id}">Resume</button>`}
+      <span class="sp"></span><button class="btn btn-sm btn-d" data-act="ask-del" data-id="${m.id}">Delete</button></div>`)).join('')}</div>`
+    : emptyBox(DB.matches.length ? 'Nothing matches' : 'No matches yet', DB.matches.length ? 'Try a different search or filter.' : 'Finish or start a match and it is saved here automatically.', DB.matches.length ? '' : '<div class="mt"><button class="btn btn-p" data-act="go" data-v="score">Start a match</button></div>')}</div>`;
+}
+
+function lbBlock(title, items, val, unit) {
+  if (!items.length) return `<div class="glass"><h3>${title}</h3><p class="muted sm mt">Play a few matches to fill this board.</p></div>`;
+  return `<div class="glass"><h3 style="margin-bottom:8px">${title}</h3>${items.map((x, i) => `<div class="lb-i"><span class="lb-r">${i + 1}</span><div style="min-width:0"><b>${esc(x.name)}</b>${unit ? `<div class="muted xs">${unit(x)}</div>` : ''}</div><span class="lb-v">${val(x)}</span></div>`).join('')}</div>`;
+}
+function pageStats() {
+  const s = aggregateStats();
+  const teams = s.teams.length ? `<div class="glass"><h3 style="margin-bottom:8px">Team table</h3><div class="scroll-x"><table class="sc"><thead><tr><th>Team</th><th>P</th><th>W</th><th>L</th><th>T</th></tr></thead><tbody>${s.teams.map(t => `<tr><td>${esc(t.name)}</td><td>${t.p}</td><td><b>${t.w}</b></td><td>${t.l}</td><td>${t.t}</td></tr>`).join('')}</tbody></table></div></div>` : '';
+  return `<div class="sec"><div class="sec-h"><div><div class="eyebrow">Across all your matches</div><h2>Leaderboards</h2></div></div>
+    ${DB.matches.length ? `<div class="grid g2 collapse">
+      ${lbBlock('Most runs', s.runs, x => x.runs, x => `${x.inns} inn · HS ${x.hs} · SR ${sr(x.runs, x.balls)}`)}
+      ${lbBlock('Most wickets', s.wkts, x => x.wkts, x => `${oversText(x.balls)} ov · ${x.runs} runs · Econ ${econ(x.runs, x.balls)}`)}
+      ${lbBlock('Most sixes', s.sixes, x => x.sixes, x => `${x.runs} runs`)}
+      ${lbBlock('Most fours', s.fours, x => x.fours, x => `${x.runs} runs`)}
+      ${lbBlock('Best strike rate', s.sr, x => sr(x.runs, x.balls), x => `${x.runs} off ${x.balls} (min 12 balls)`)}
+      ${lbBlock('Best economy', s.econ, x => econ(x.runs, x.balls), x => `${x.wkts} wkts in ${oversText(x.balls)} ov (min 2 overs)`)}
+    </div><div class="mt">${teams}</div>` : emptyBox('No stats yet', 'Leaderboards build up as you score matches.', '<div class="mt"><button class="btn btn-p" data-act="go" data-v="score">Start a match</button></div>')}</div>`;
+}
+
+/* ---------- modals ---------- */
+function selectOpts(list, sel) { return list.map(n => `<option value="${esc(n)}" ${n === sel ? 'selected' : ''}>${esc(n)}</option>`).join(''); }
+function promptModal(m) {
+  const p = pending(m); const inn = cur(m);
+  if (!p) return '';
+  if (p.type === 'openers') {
+    const r = m.rosters[inn.bat];
+    return `<div class="scrim"><div class="modal"><div class="eyebrow">${esc(m.names[inn.bat])} batting</div><h2 style="margin:6px 0 14px">Choose openers</h2>
+      <label class="f" for="sel-s">On strike</label><select id="sel-s">${selectOpts(r, r[0])}</select>
+      <label class="f mt" for="sel-n">Non-striker</label><select id="sel-n">${selectOpts(r, r[1])}</select>
+      <div id="modal-err" class="xs" style="color:var(--red);min-height:18px;margin-top:8px"></div>
+      <button class="btn btn-p btn-block" data-act="ok-openers">Continue →</button></div></div>`;
+  }
+  if (p.type === 'bowler') {
+    const list = eligibleBowlers(m, inn);
+    return `<div class="scrim"><div class="modal"><div class="eyebrow">${esc(m.names[inn.bowl])} bowling</div><h2 style="margin:6px 0 14px">${inn.overs.length ? 'Over ' + (inn.overs.length + 1) + ': choose bowler' : 'Choose opening bowler'}</h2>
+      <label class="f" for="sel-b">Bowler</label><select id="sel-b">${selectOpts(list, list[0])}</select>
+      ${inn.lastBowler ? `<p class="muted xs">${esc(inn.lastBowler)} bowled the last over and cannot bowl back to back.</p>` : ''}
+      <button class="btn btn-p btn-block mt" data-act="ok-bowler">Start over →</button></div></div>`;
+  }
+  if (p.type === 'batter') {
+    const list = availableBatters(m, inn);
+    return `<div class="scrim"><div class="modal"><div class="eyebrow">Wicket</div><h2 style="margin:6px 0 14px">Next batter in</h2>
+      <label class="f" for="sel-nb">Batter</label><select id="sel-nb">${selectOpts(list, list[0])}</select>
+      <button class="btn btn-p btn-block mt" data-act="ok-batter">Continue →</button></div></div>`;
+  }
+  if (p.type === 'break') {
+    const nxt = m.innings[1];
+    return `<div class="scrim"><div class="modal" style="text-align:center"><div class="eyebrow">Innings break</div>
+      <h2 style="margin:8px 0">${esc(m.names[inn.bat])} ${inn.runs}/${inn.wickets}</h2>
+      <p class="muted">${oversText(inn.balls)} overs · ${esc(inn.endReason === 'allout' ? 'All out' : 'Overs complete')}</p>
+      <div class="banner mt" style="font-size:18px">${esc(m.names[nxt.bat])} need ${m.target} to win</div>
+      <button class="btn btn-p btn-block mt" data-act="start-second">Start 2nd innings →</button></div></div>`;
+  }
+  return '';
+}
+function modalHtml() {
+  const mo = ui.modal; if (!mo) return '';
+  const m = mo.id ? getMatch(mo.id) : activeMatch();
+  if (mo.type === 'wicket' && m) {
+    const inn = cur(m); const ext = ui.mode;
+    const kinds = ext === 'nb' || inn.freeHit || ext === 'b' || ext === 'lb' ? [['runout', 'Run out']] : ext === 'wd' ? [['stumped', 'Stumped'], ['runout', 'Run out']] : [['bowled', 'Bowled'], ['caught', 'Caught'], ['lbw', 'LBW'], ['stumped', 'Stumped'], ['runout', 'Run out'], ['hitwicket', 'Hit wicket']];
+    if (!kinds.some(k => k[0] === mo.kind)) mo.kind = kinds[0][0];
+    const fielders = m.rosters[inn.bowl];
+    return `<div class="scrim" data-act="close-modal-bg"><div class="modal">
+      <div class="row between"><h2>Wicket</h2><button class="btn btn-sm" data-act="close-modal">Cancel</button></div>
+      ${inn.freeHit ? '<p class="xs" style="color:var(--amber)">Free hit: only a run out is allowed.</p>' : ''}
+      <label class="f mt">How out${ext ? ' (' + { wd: 'on a wide', nb: 'off a no-ball', b: 'off a bye', lb: 'off a leg bye' }[ext] + ')' : ''}</label>
+      <div class="row">${kinds.map(k => `<button class="chip" data-act="w-kind" data-v="${k[0]}" aria-pressed="${mo.kind === k[0]}">${k[1]}</button>`).join('')}</div>
+      ${mo.kind === 'runout' ? `<label class="f mt">Who is out</label><div class="row">
+        <button class="chip" data-act="w-out" data-v="striker" aria-pressed="${mo.out === 'striker'}">${esc(inn.striker)} (striker)</button>
+        <button class="chip" data-act="w-out" data-v="non" aria-pressed="${mo.out === 'non'}">${esc(inn.nonStriker)}</button></div>
+        <label class="f mt">Runs completed before the run out</label><div class="row">${[0, 1, 2, 3].map(r => `<button class="chip" data-act="w-runs" data-v="${r}" aria-pressed="${mo.runs === r}">${r}</button>`).join('')}</div>` : ''}
+      ${mo.kind === 'caught' || mo.kind === 'runout' ? `<label class="f mt" for="w-fielder">Fielder (optional)</label><select id="w-fielder"><option value="">–</option>${selectOpts(fielders, '')}</select>` : ''}
+      <button class="btn btn-w btn-block mt" style="min-height:52px" data-act="w-confirm">Confirm wicket</button></div></div>`;
+  }
+  if (mo.type === 'confirm') {
+    return `<div class="scrim" data-act="close-modal-bg"><div class="modal"><h2>${esc(mo.title)}</h2><p class="muted">${esc(mo.text)}</p>
+      <div class="grid g2" style="gap:10px;margin-top:14px"><button class="btn" data-act="close-modal">Cancel</button><button class="btn ${mo.danger ? 'btn-w' : 'btn-p'}" data-act="confirm-yes">${esc(mo.yes)}</button></div></div></div>`;
+  }
+  if (mo.type === 'card' && m) {
+    return `<div class="scrim" data-act="close-modal-bg"><div class="modal wide"><div class="row between"><div><div class="eyebrow">Full scorecard</div><h2>${esc(m.names[0])} v ${esc(m.names[1])}</h2></div><button class="btn btn-sm" data-act="close-modal">Close</button></div>
+      <div class="result mt8">${esc(m.finished ? m.resultText : 'Match in progress')}</div>
+      <div class="stack mt">${m.innings.map((inn, i) => fullCard(m, inn, i)).join('<hr style="border:0;border-top:1px solid var(--line);width:100%">')}</div>
+      <div class="row mt"><button class="btn btn-sm" data-act="copy-summary" data-id="${m.id}">Copy summary</button></div></div></div>`;
+  }
+  if (mo.type === 'backup') {
+    return `<div class="scrim" data-act="close-modal-bg"><div class="modal"><div class="row between"><h2>Backup</h2><button class="btn btn-sm" data-act="close-modal">Close</button></div>
+      <p class="muted sm">Downloads are not available here, so copy your data as text and keep it somewhere safe. To restore, paste it below.</p>
+      <div class="row mt8"><button class="btn btn-sm btn-p" data-act="copy-backup">Copy all data</button></div>
+      <label class="f mt" for="imp">Restore from pasted data</label><textarea id="imp" placeholder="Paste exported data here"></textarea>
+      <div id="imp-msg" class="xs mt8" style="min-height:18px"></div>
+      <button class="btn btn-block mt8" data-act="import">Import matches</button></div></div>`;
+  }
+  return '';
+}
+
+/* ---------- shell ---------- */
+function tabsHtml() {
+  const am = activeMatch(); const liveOn = am && !am.finished;
+  return ROUTES.map(([k, l]) => `<button class="tab" data-act="go" data-v="${k}" ${ui.route === k ? 'aria-current="page"' : ''}>${k === 'live' && liveOn ? '<i class="live-dot"></i>' : ''}${l}</button>`).join('');
+}
+function render() {
+  const app = document.getElementById('app');
+  let page = '';
+  if (ui.route === 'home') page = pageHome();
+  else if (ui.route === 'score') page = pageScore();
+  else if (ui.route === 'live') page = pageLive();
+  else if (ui.route === 'history') page = pageHistory();
+  else page = pageStats();
+  const am = activeMatch();
+  const prompt = ui.route === 'score' && am && !ui.showSetup ? promptModal(am) : '';
+  app.innerHTML = `<header class="top"><div class="top-in"><button class="logo" data-act="go" data-v="home" aria-label="Turf Wars home"><i></i>Turf <b>Wars</b></button><nav class="tabs" aria-label="Main">${tabsHtml()}</nav></div></header>
+    <main class="wrap">${page}<div class="footer">Turf Wars · built for the love of turf cricket · data stays on this device</div></main>
+    <nav class="bottom" aria-label="Main"><div class="tabs">${tabsHtml()}</div></nav>${prompt}${modalHtml()}`;
+}
+
+/* ===== Turf Wars: actions, effects, boot ===== */
+let toastTimer = null;
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  document.body.appendChild(t);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 2400);
+}
+function copyText(text, okMsg) {
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove(); toast(ok ? okMsg : 'Copy was blocked. Select the text and copy it manually.');
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => toast(okMsg), fallback);
+    else fallback();
+  } catch (e) { fallback(); }
+}
+
+/* sound + celebration */
+let actx = null;
+function beep(freqs, dur) {
+  if (!DB.prefs.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'triangle'; o.frequency.value = f; o.connect(g); g.connect(actx.destination);
+      const t0 = actx.currentTime + i * dur * 0.8;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    });
+  } catch (e) { /* audio blocked */ }
+}
+function flash(kind) {
+  const label = { f4: 'Four!', f6: 'Six!', w: 'Wicket!' }[kind]; if (!label) return;
+  const d = document.createElement('div'); d.className = 'fx ' + kind; d.innerHTML = '<b>' + label + '</b>';
+  document.body.appendChild(d); setTimeout(() => d.remove(), 1100);
+  if (kind === 'f4') beep([523, 784], 0.14); else if (kind === 'f6') beep([523, 659, 784, 1047], 0.13); else beep([330, 220], 0.2);
+  try { if (navigator.vibrate) navigator.vibrate(kind === 'w' ? [60, 40, 60] : 30); } catch (e) { /* ignore */ }
+}
+function confetti() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas'); c.className = 'confetti'; document.body.appendChild(c);
+  const ctx = c.getContext('2d'); const W = c.width = innerWidth, H = c.height = innerHeight;
+  const cols = ['#c8f43a', '#59c6ff', '#ffb224', '#ff4d5f', '#ffffff'];
+  const ps = Array.from({ length: 150 }, () => ({ x: W / 2 + (Math.random() - .5) * 120, y: H * 0.55, vx: (Math.random() - .5) * 16, vy: -Math.random() * 18 - 6, s: Math.random() * 8 + 4, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[(Math.random() * cols.length) | 0] }));
+  let f = 0;
+  (function tick() {
+    ctx.clearRect(0, 0, W, H);
+    ps.forEach(p => { p.vy += .45; p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 3, p.s, p.s * .6); ctx.restore(); });
+    if (++f < 130) requestAnimationFrame(tick); else c.remove();
+  })();
+  beep([523, 659, 784, 1047, 1319], 0.16);
+}
+function maybeCelebrateEnd(m) {
+  if (m.finished && !ui.celebrated[m.id] && m.result !== null) { ui.celebrated[m.id] = 1; confetti(); }
+}
+
+/* actions */
+function afterScore(res, m) {
+  if (!res.ok) { toast(res.msg); return; }
+  ui.mode = null; render();
+  if (res.fx) flash(res.fx);
+  if (res.ended) {
+    if (m.finished) { maybeCelebrateEnd(m); toast(m.resultText); }
+    else toast('Innings complete');
+  }
+}
+function go(route) { ui.route = route; ui.modal = null; ui.showSetup = false; render(); scrollTo(0, 0); }
+function askConfirm(o) { ui.modal = Object.assign({ type: 'confirm' }, o); render(); }
+
+function startMatchFromSetup() {
+  const s = ui.setup;
+  const m = createMatch({ names: [s.t1, s.t2], overs: s.overs, ppt: s.ppt, venue: s.venue, players: [s.p1, s.p2],
+    tossWinner: s.tossWinner, tossChoice: s.tossChoice, wide: s.wide, noball: s.noball, freeHit: s.freeHit });
+  ui.showSetup = false; ui.mode = null; ui.liveId = m.id; ui.route = 'score'; render(); scrollTo(0, 0);
+}
+
+function handleAct(act, el, ev) {
+  const v = el.dataset.v, id = el.dataset.id;
+  const m = activeMatch();
+  switch (act) {
+    case 'go': go(v); break;
+    case 'setup-set': {
+      const k = el.dataset.k;
+      ui.setup[k] = k === 'freeHit' ? v === '1' : (k === 'tossChoice' ? v : Number(v));
+      render(); break;
+    }
+    case 'toggle-players': ui.setup.showPlayers = !ui.setup.showPlayers; render(); break;
+    case 'start-match': startMatchFromSetup(); break;
+    case 'cancel-setup': ui.showSetup = false; render(); break;
+    case 'new-match': {
+      if (m && !m.finished) askConfirm({ title: 'Start a new match?', text: 'The current match stays saved in History and can be resumed later.', yes: 'New match', fn: 'newmatch' });
+      else { ui.showSetup = true; render(); scrollTo(0, 0); }
+      break;
+    }
+    case 'mode': ui.mode = ui.mode === v ? null : v; render(); break;
+    case 'run': { if (!m) break; afterScore(deliver(m, { ext: ui.mode, runs: Number(v) }), m); break; }
+    case 'wicket': {
+      if (!m) break;
+      ui.modal = { type: 'wicket', kind: 'bowled', out: 'striker', runs: 0 }; render(); break;
+    }
+    case 'w-kind': ui.modal.kind = v; if (v !== 'runout') { ui.modal.runs = 0; ui.modal.out = 'striker'; } render(); break;
+    case 'w-out': ui.modal.out = v; render(); break;
+    case 'w-runs': ui.modal.runs = Number(v); render(); break;
+    case 'w-confirm': {
+      const mo = ui.modal; if (!m || !mo) break;
+      const f = document.getElementById('w-fielder'); const fielder = f ? f.value : '';
+      const res = deliver(m, { ext: ui.mode, runs: mo.kind === 'runout' ? mo.runs : 0, wkt: { kind: mo.kind, out: mo.kind === 'runout' ? mo.out : 'striker', fielder } });
+      if (!res.ok) { toast(res.msg); break; }
+      ui.modal = null; afterScore(res, m); break;
+    }
+    case 'undo': if (m && undoLast(m)) { ui.mode = null; render(); toast('Last action undone'); } break;
+    case 'swap': if (m && swapStrike(m)) { render(); toast('Strike swapped'); } break;
+    case 'ask': {
+      if (v === 'end') askConfirm({ title: 'End this innings?', text: 'The innings closes with the current score.', yes: 'End innings', fn: 'end' });
+      else askConfirm({ title: 'Finish the match now?', text: 'The result is worked out from the scores as they stand.', yes: 'Finish match', fn: 'finish', danger: true });
+      break;
+    }
+    case 'confirm-yes': {
+      const fn = ui.modal && ui.modal.fn; const tid = ui.modal && ui.modal.id; ui.modal = null;
+      if (fn === 'end' && m) { pushUndo(m); endInnings(m, 'manual'); touch(m); if (m.finished) maybeCelebrateEnd(m); }
+      else if (fn === 'finish' && m) { pushUndo(m); finishMatch(m, false); touch(m); maybeCelebrateEnd(m); }
+      else if (fn === 'newmatch') { ui.showSetup = true; }
+      else if (fn === 'delete' && tid) {
+        DB.matches = DB.matches.filter(x => x.id !== tid);
+        if (DB.activeId === tid) DB.activeId = DB.matches[0] ? DB.matches[0].id : null;
+        if (ui.liveId === tid) ui.liveId = null;
+        saveDB(); toast('Match deleted');
+      }
+      render(); break;
+    }
+    case 'close-modal': ui.modal = null; render(); break;
+    case 'close-modal-bg': if (ev.target === el) { ui.modal = null; render(); } break;
+    case 'ok-openers': {
+      const s = document.getElementById('sel-s').value, n = document.getElementById('sel-n').value;
+      if (s === n) { document.getElementById('modal-err').textContent = 'Pick two different batters.'; break; }
+      setOpeners(m, s, n); render(); break;
+    }
+    case 'ok-bowler': setBowler(m, document.getElementById('sel-b').value); render(); break;
+    case 'ok-batter': setNewBatter(m, document.getElementById('sel-nb').value); render(); break;
+    case 'start-second': startSecondInnings(m); render(); break;
+    case 'open-live': ui.liveId = id; ui.route = 'live'; ui.modal = null; render(); scrollTo(0, 0); break;
+    case 'view-card': ui.modal = { type: 'card', id }; render(); break;
+    case 'resume': DB.activeId = id; ui.liveId = id; saveDB(); ui.showSetup = false; go('score'); break;
+    case 'ask-del': {
+      const t = getMatch(id); if (!t) break;
+      askConfirm({ title: 'Delete this match?', text: t.names[0] + ' vs ' + t.names[1] + ' will be removed for good.', yes: 'Delete', fn: 'delete', id, danger: true }); break;
+    }
+    case 'hist-filter': ui.histFilter = v; render(); break;
+    case 'copy-summary': { const t = getMatch(id) || m; if (t) copyText(summaryText(t), 'Summary copied'); break; }
+    case 'backup': ui.modal = { type: 'backup' }; render(); break;
+    case 'copy-backup': copyText(JSON.stringify({ app: 'turfwars', v: 2, matches: DB.matches }), 'All data copied'); break;
+    case 'import': {
+      const msg = document.getElementById('imp-msg'); const raw = document.getElementById('imp').value.trim();
+      try {
+        const d = JSON.parse(raw);
+        const list = Array.isArray(d) ? d : d.matches;
+        if (!Array.isArray(list)) throw new Error('bad');
+        let added = 0;
+        list.forEach(x => {
+          if (x && x.id && Array.isArray(x.innings) && x.innings.length === 2 && Array.isArray(x.names) && Array.isArray(x.rosters) && !getMatch(x.id)) {
+            x.undo = x.undo || []; x.queue = x.queue || []; DB.matches.push(x); added++;
+          }
+        });
+        DB.matches.sort((a, b) => b.updatedAt - a.updatedAt); saveDB();
+        ui.modal = null; render(); toast(added ? added + ' match' + (added > 1 ? 'es' : '') + ' imported' : 'Nothing new to import');
+      } catch (e) { msg.style.color = 'var(--red)'; msg.textContent = 'That does not look like Turf Wars data. Copy it again from the Backup screen.'; }
+      break;
+    }
+    default: break;
+  }
+}
+
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-act]'); if (!el || el.disabled) return;
+  handleAct(el.dataset.act, el, ev);
+});
+document.addEventListener('input', ev => {
+  const t = ev.target; const f = t.dataset && t.dataset.f; if (!f) return;
+  if (f === 'hq') {
+    ui.histQ = t.value; const pos = t.selectionStart; render();
+    const n = document.getElementById('hq'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } }
+    return;
+  }
+  if (f === 'overs' || f === 'ppt') ui.setup[f] = Number(t.value); else ui.setup[f] = t.value;
+  if (f === 't1' || f === 't2') { /* labels on player boxes update next render */ }
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && ui.modal) { ui.modal = null; render(); }
+});
+
+/* cross-tab live sync */
+function externalSync() {
+  const before = JSON.stringify(DB.matches.map(x => [x.id, x.updatedAt]));
+  const prevActive = DB.activeId;
+  loadDB();
+  const after = JSON.stringify(DB.matches.map(x => [x.id, x.updatedAt]));
+  if (before === after && prevActive === DB.activeId) return;
+  const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+  if (ui.route === 'score' && (ui.showSetup || typing)) return;
+  if (ui.modal && ui.modal.type === 'wicket') return;
+  render();
+}
+window.addEventListener('storage', e => { if (e.key === LS_KEY) externalSync(); });
+if (bc) bc.onmessage = () => externalSync();
+setInterval(() => { if (document.visibilityState === 'visible' && (ui.route === 'live' || ui.route === 'home')) externalSync(); }, 3000);
+
+/* boot */
+loadDB();
+(function seedRoute() {
+  const am = activeMatch();
+  ui.liveId = am ? am.id : null;
+  const h = (location.hash || '').replace('#', '');
+  if (['home', 'score', 'live', 'history', 'stats'].includes(h)) ui.route = h;
+})();
+render();
+
+</script>
+
+</body></html>
